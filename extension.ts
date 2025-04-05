@@ -57,7 +57,13 @@ const TabletModeInputToggle = GObject.registerClass(
 
 const MySystemIndicator = GObject.registerClass(
   class MySystemIndicator extends SystemIndicator {
+    static gsettingsOskEnableSchema = "org.gnome.desktop.a11y.applications";
+    static gsettingsOskEnableKey = "screen-keyboard-enabled";
+
+    _toggle = new TabletModeInputToggle();
     _extensionPath: string;
+    _settings: Gio.Settings;
+    _settingsChangeHandlerId: number;
 
     /**
      * @param extensionPath absolute path where the extension's files are (use Extension.path)
@@ -66,16 +72,38 @@ const MySystemIndicator = GObject.registerClass(
       super();
       this._extensionPath = extensionPath;
 
-      const toggle = new TabletModeInputToggle();
-      toggle.connect("clicked", async () => {
-        if (!(await this.setInputDisabled(toggle.checked))) {
-          toggle.checked = !toggle.checked;
+      this._toggle.connect("clicked", async () => {
+        if (!(await this.setInputDisabled(this._toggle.checked))) {
+          this._toggle.checked = !this._toggle.checked;
           return;
         }
-        this.setOnScreenKeyboardEnabled(toggle.checked);
+        this.setOnScreenKeyboardEnabled(this._toggle.checked);
       });
 
-      this.quickSettingsItems.push(toggle);
+      this.quickSettingsItems.push(this._toggle);
+
+      this._settings = new Gio.Settings({
+        schema: MySystemIndicator.gsettingsOskEnableSchema,
+      });
+      this._settingsChangeHandlerId = this._settings.connect(
+        "changed",
+        (settings, key) => {
+          // re-enable on-screen keyboard if it was disabled while 'tablet mode' is on
+          if (key == MySystemIndicator.gsettingsOskEnableKey) {
+            const oskEnabled = settings.get_boolean(key);
+            if (this._toggle.checked && !oskEnabled) {
+              settings.set_boolean(
+                MySystemIndicator.gsettingsOskEnableKey,
+                true
+              );
+            }
+          }
+        }
+      );
+    }
+
+    destroy() {
+      this._settings.disconnect(this._settingsChangeHandlerId);
     }
 
     async setInputDisabled(disabled: boolean) {
@@ -115,10 +143,10 @@ const MySystemIndicator = GObject.registerClass(
      *       gsettings set org.gnome.desktop.a11y.applications screen-keyboard-enabled true/false
      */
     setOnScreenKeyboardEnabled(enabled: boolean) {
-      const settings = new Gio.Settings({
-        schema: "org.gnome.desktop.a11y.applications",
-      });
-      settings.set_boolean("screen-keyboard-enabled", enabled);
+      this._settings.set_boolean(
+        MySystemIndicator.gsettingsOskEnableKey,
+        enabled
+      );
     }
   }
 );

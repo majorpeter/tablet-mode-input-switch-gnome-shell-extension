@@ -24,6 +24,14 @@ cat /sys/class/input/event*/device/name
 
 Use the test mode (`/util/input-evt-inhibitor --test`) to check whether the `config.h` is correct. This command disables the selected devices, waits for a bit and then re-enables them.
 
+## Installation
+
+```sh
+make install
+```
+
+Note that this moves the `dist` directory to the installation location. Copying the `setuid` file would drop this attribute, hence `mv` is used.
+
 ## Development
 
 The extension can be tested in a separate GNOME shell with
@@ -36,4 +44,16 @@ And enabled from a terminal **launched from this session** with
 
 ```sh
 gnome-extensions enable tabletmodeinputswitch@majorpeter.github.com
+```
+
+New builds can be tested faster if the install directory is a symlink to the `dist` folder:
+
+```sh
+ln -s <path-to-source-directory>/dist ~/.local/share/gnome-shell/extensions/tabletmodeinputswitch\@majorpeter.github.com
+```
+
+And then after each change:
+
+```sh
+make prepare && dbus-run-session -- gnome-shell --nested --wayland
 ```
