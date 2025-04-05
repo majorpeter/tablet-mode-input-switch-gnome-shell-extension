@@ -1,8 +1,8 @@
 import GObject from "gi://GObject";
+/// @see https://gjs-docs.gnome.org/gio20~2.0/
 import Gio from "gi://Gio";
 
 import * as Main from "resource:///org/gnome/shell/ui/main.js";
-
 import {
   Extension,
   gettext as _,
@@ -11,6 +11,37 @@ import {
   QuickToggle,
   SystemIndicator,
 } from "resource:///org/gnome/shell/ui/quickSettings.js";
+import * as Dialog from "resource:///org/gnome/shell/ui/dialog.js";
+import * as ModalDialog from "resource:///org/gnome/shell/ui/modalDialog.js";
+
+/// @see https://gjs.guide/guides/gio/subprocesses.html#promise-wrappers
+Gio._promisify(Gio.Subprocess.prototype, "communicate_utf8_async");
+
+/**
+ * Shows a message box modal dialog
+ * @param {string} message message to be shown
+ * @param {string?} title optional title
+ */
+function showMessageDialog(message, title) {
+  const dialog = new ModalDialog.ModalDialog({
+    destroyOnClose: false,
+    styleClass: "my-dialog",
+  });
+
+  const messageLayout = new Dialog.MessageDialogContent({
+    title: title ?? "Message",
+    description: message,
+  });
+  dialog.contentLayout.add_child(messageLayout);
+
+  dialog.setButtons([
+    {
+      label: "Ok",
+      action: () => dialog.destroy(),
+    },
+  ]);
+  dialog.open();
+}
 
 const TabletModeInputToggle = GObject.registerClass(
   class TabletModeInputToggle extends QuickToggle {
@@ -44,15 +75,26 @@ const MySystemIndicator = GObject.registerClass(
     /**
      * @param {bool} disabled
      */
-    setInputDisabled(disabled) {
-      const proc = new Gio.Subprocess({
-        argv: [
-          `${this._extensionPath}/util/input-evt-inhibitor`,
-          disabled ? "off" : "on",
-        ],
-        flags: Gio.SubprocessFlags.NONE,
-      });
-      proc.init(null);
+    async setInputDisabled(disabled) {
+      try {
+        const proc = Gio.Subprocess.new(
+          [
+            `${this._extensionPath}/util/input-evt-inhibitor`,
+            disabled ? "off" : "on",
+          ],
+          Gio.SubprocessFlags.STDOUT_PIPE | Gio.SubprocessFlags.STDERR_MERGE
+        );
+
+        const [stdout] = await proc.communicate_utf8_async(null, null);
+        if (!proc.get_successful()) {
+          throw stdout;
+        }
+      } catch (e) {
+        if (!(e instanceof String)) {
+          e = e.toString();
+        }
+        showMessageDialog(e, _("Failed to execute subprocess!"));
+      }
     }
   }
 );
