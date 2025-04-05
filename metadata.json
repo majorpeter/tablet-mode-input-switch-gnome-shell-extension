@@ -1,0 +1,8 @@
+{
+  "name": "Tablet Mode Input Switch",
+  "description": "Allows switching the laptop inputs (keyboard and touchpad) on/off from the Quick Settings (Wifi, BT etc.) panel.",
+  "uuid": "tabletmodeinputswitch@majorpeter.github.com",
+  "shell-version": [
+    "48"
+  ]
+}
