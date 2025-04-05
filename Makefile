@@ -10,10 +10,13 @@ dist/extension.js: extension.ts node_modules
 	npm run-script build
 
 dist/input-evt-inhibitor: util/main.cpp util/config.h
+	@mkdir -p dist
 	g++ -std=c++20 -o dist/input-evt-inhibitor util/main.cpp
 
 setuid: dist/input-evt-inhibitor
-	sudo chown root:root dist/input-evt-inhibitor && sudo chmod u+s dist/input-evt-inhibitor
+	@[[ $$(stat --format="%a:%u" dist/input-evt-inhibitor) == "4755:0" ]] || \
+	(echo "Fixing setuid" && \
+	sudo chown root:root dist/input-evt-inhibitor && sudo chmod u+s dist/input-evt-inhibitor)
 
 prepare: dist/extension.js dist/input-evt-inhibitor setuid
 	@cp metadata.json dist/
