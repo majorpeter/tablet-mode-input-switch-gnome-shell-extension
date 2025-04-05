@@ -70,7 +70,9 @@ const MySystemIndicator = GObject.registerClass(
       toggle.connect("clicked", async () => {
         if (!(await this.setInputDisabled(toggle.checked))) {
           toggle.checked = !toggle.checked;
+          return;
         }
+        this.setOnScreenKeyboardEnabled(toggle.checked);
       });
 
       this.quickSettingsItems.push(toggle);
@@ -106,6 +108,17 @@ const MySystemIndicator = GObject.registerClass(
       }
 
       return true;
+    }
+
+    /**
+     * @note same as the following command:
+     *       gsettings set org.gnome.desktop.a11y.applications screen-keyboard-enabled true/false
+     */
+    setOnScreenKeyboardEnabled(enabled: boolean) {
+      const settings = new Gio.Settings({
+        schema: "org.gnome.desktop.a11y.applications",
+      });
+      settings.set_boolean("screen-keyboard-enabled", enabled);
     }
   }
 );
