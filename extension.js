@@ -48,7 +48,7 @@ const MySystemIndicator = GObject.registerClass(
       const proc = new Gio.Subprocess({
         argv: [
           `${this._extensionPath}/util/input-evt-inhibitor`,
-          disabled ? "1" : "0",
+          disabled ? "off" : "on",
         ],
         flags: Gio.SubprocessFlags.NONE,
       });

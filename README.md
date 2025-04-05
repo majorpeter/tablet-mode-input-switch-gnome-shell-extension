@@ -22,6 +22,8 @@ cat /sys/class/input/event*/device/name
 
 (`xinput` won't be useful under Wayland.)
 
+Use the test mode (`/util/input-evt-inhibitor --test`) to check whether the `config.h` is correct. This command disables the selected devices, waits for a bit and then re-enables them.
+
 ## Development
 
 The extension can be tested in a separate GNOME shell with
