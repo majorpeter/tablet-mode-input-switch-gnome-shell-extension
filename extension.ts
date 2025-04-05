@@ -1,6 +1,6 @@
 import GObject from "gi://GObject";
-/// @see https://gjs-docs.gnome.org/gio20~2.0/
 import Gio from "gi://Gio";
+import GLib from "gi://GLib";
 
 import * as Main from "resource:///org/gnome/shell/ui/main.js";
 import {
@@ -19,10 +19,10 @@ Gio._promisify(Gio.Subprocess.prototype, "communicate_utf8_async");
 
 /**
  * Shows a message box modal dialog
- * @param {string} message message to be shown
- * @param {string?} title optional title
+ * @param message message to be shown
+ * @param title optional title
  */
-function showMessageDialog(message, title) {
+function showMessageDialog(message: string, title?: string) {
   const dialog = new ModalDialog.ModalDialog({
     destroyOnClose: false,
     styleClass: "my-dialog",
@@ -57,29 +57,31 @@ const TabletModeInputToggle = GObject.registerClass(
 
 const MySystemIndicator = GObject.registerClass(
   class MySystemIndicator extends SystemIndicator {
-    _extensionPath;
+    _extensionPath: string;
 
     /**
-     * @param {string} extensionPath absolute path where the extension's files are (use Extension.path)
+     * @param extensionPath absolute path where the extension's files are (use Extension.path)
      */
-    constructor(extensionPath) {
+    constructor(extensionPath: string) {
       super();
       this._extensionPath = extensionPath;
 
       const toggle = new TabletModeInputToggle();
-      toggle.connect("clicked", () => this.setInputDisabled(toggle.checked));
+      toggle.connect("clicked", async () => {
+        if (!(await this.setInputDisabled(toggle.checked))) {
+          toggle.checked = !toggle.checked;
+        }
+      });
 
       this.quickSettingsItems.push(toggle);
     }
 
-    /**
-     * @param {bool} disabled
-     */
-    async setInputDisabled(disabled) {
+    async setInputDisabled(disabled: boolean) {
       try {
+        /// @note new Gio.Subprocess({argv: [], flags: ...}) does not work
         const proc = Gio.Subprocess.new(
           [
-            `${this._extensionPath}/util/input-evt-inhibitor`,
+            `${this._extensionPath}/input-evt-inhibitor`,
             disabled ? "off" : "on",
           ],
           Gio.SubprocessFlags.STDOUT_PIPE | Gio.SubprocessFlags.STDERR_MERGE
@@ -90,23 +92,36 @@ const MySystemIndicator = GObject.registerClass(
           throw stdout;
         }
       } catch (e) {
-        if (!(e instanceof String)) {
-          e = e.toString();
+        let message: string;
+        if (e instanceof Error || e instanceof GLib.SpawnError) {
+          message = e.toString();
+        } else if (typeof e == "string") {
+          message = e as string;
+        } else {
+          console.error(e);
+          message = "Unknown error, check logs!";
         }
-        showMessageDialog(e, _("Failed to execute subprocess!"));
+        showMessageDialog(message, _("Failed to execute subprocess!"));
+        return false;
       }
+
+      return true;
     }
   }
 );
 
 export default class extends Extension {
+  _indicator?: SystemIndicator;
+
   enable() {
     this._indicator = new MySystemIndicator(this.path);
     Main.panel.statusArea.quickSettings.addExternalIndicator(this._indicator);
   }
 
   disable() {
-    this._indicator.quickSettingsItems.forEach((item) => item.destroy());
-    this._indicator.destroy();
+    if (this._indicator) {
+      this._indicator.quickSettingsItems.forEach((item) => item.destroy());
+      this._indicator.destroy();
+    }
   }
 }

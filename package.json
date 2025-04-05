@@ -1,0 +1,28 @@
+{
+  "name": "tablet-mode-input-switch",
+  "version": "0.0.0",
+  "description": "A GNOME shell extension that allows switching the laptop inputs (keyboard and touchpad) on/off from the Quick Settings (Wifi, BT etc.) panel.",
+  "type": "module",
+  "private": true,
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.commajorpeter/tablet-mode-input-switch-gnome-shell-extension.git"
+  },
+  "author": "Peter Major <majorpeter29@gmail.com>",
+  "scripts": {
+    "build": "npx tsc",
+    "lint": "npx eslint"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.24.0",
+    "eslint": "^9.24.0",
+    "eslint-plugin-jsdoc": "^50.6.9",
+    "globals": "^16.0.0",
+    "typescript": "^5.8.3",
+    "typescript-eslint": "^8.29.0"
+  },
+  "dependencies": {
+    "@girs/gjs": "^4.0.0-beta.23",
+    "@girs/gnome-shell": "^48.0.2"
+  }
+}
